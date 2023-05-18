@@ -270,16 +270,16 @@ vec sample_psi_zeta_pos_hmc(
   vec next_momentum_v = momentum_v + epsilon / 2 *
     compute_psi_zeta_gradient(case_vote_v, next_case_psi_pos, next_case_zeta_pos,
                               angle_v, vote_prob_k);
-  next_case_psi_pos -= epsilon * conc_1 * sin(next_momentum_v(0));
-  next_case_zeta_pos -= epsilon * conc_2 * sin(next_momentum_v(1));
-  for (int l = 2; l < num_steps; l++) {
+  next_case_psi_pos += epsilon * conc_1 * sin(next_momentum_v(0));
+  next_case_zeta_pos += epsilon * conc_2 * sin(next_momentum_v(1));
+  for (int l = 1; l < num_steps; l++) {
     next_momentum_v += epsilon *
       compute_psi_zeta_gradient(case_vote_v, next_case_psi_pos, next_case_zeta_pos,
                                 angle_v, vote_prob_k);
-    next_case_psi_pos -= epsilon * conc_1 * sin(next_momentum_v(0));
-    next_case_zeta_pos -= epsilon * conc_2 * sin(next_momentum_v(1));
+    next_case_psi_pos += epsilon * conc_1 * sin(next_momentum_v(0));
+    next_case_zeta_pos += epsilon * conc_2 * sin(next_momentum_v(1));
   }
-  next_momentum_v += next_momentum_v + epsilon / 2 *
+  next_momentum_v += epsilon / 2 *
     compute_psi_zeta_gradient(case_vote_v, next_case_psi_pos, next_case_zeta_pos,
                               angle_v, vote_prob_k);
   next_case_psi_pos = clean_angle(next_case_psi_pos);
@@ -300,7 +300,7 @@ vec sample_psi_zeta_pos_hmc(
   double next_M = 
     calc_unnorm_von_mises_log_prob_hmc(momentum_v(0), conc_1) + 
     calc_unnorm_von_mises_log_prob_hmc(momentum_v(1), conc_2) -
-    calc_unnorm_von_mises_log_prob_hmc(next_momentum_v(0), conc_1) + 
+    calc_unnorm_von_mises_log_prob_hmc(next_momentum_v(0), conc_1) - 
     calc_unnorm_von_mises_log_prob_hmc(next_momentum_v(1), conc_2);
   
   vec out_v(2);
@@ -486,6 +486,7 @@ double sample_rho_pos_gibbs_centered(
   }
   return(rho);
 }
+
 
 vec sample_mean_1_tau_cov_s_2_pos_log(
   double mean_1, double tau, double cov_s_2,  
