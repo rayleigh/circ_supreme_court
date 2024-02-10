@@ -253,32 +253,118 @@ sample_judge_ideology_keep_final_draws_only_rcpp <-
     return(all_params_draw)
   }
 
-#Simulate parametric hierarchical model
-results_save_file <- circ_ideal_results
+sample_judge_ideology_keep_final_draws_only_rcpp_rmhmc <- 
+  function(vote_m, case_year_v, 
+           psi_inits = NULL, zeta_inits = NULL,
+           circ_ideal_pos_1_m_inits = NULL,
+           circ_ideal_pos_2_m_inits = NULL,
+           vote_prob_k_m_inits = NULL,
+           mean_1, mean_2 = 0, rho, tau,
+           cov_s_init = 1,
+           lambda_kappa_init = 25,
+           pos_ind_list = c(),
+           neg_ind_list = c(),
+           pos_ind_years_list = c(), 
+           neg_ind_years_list = c(),
+           num_iter = 2000, start_iter = num_iter / 2, 
+           keep_iter = 1, sample_sigma = 0.1, sample_cov = NULL,
+           mean_1_mu = 10, mean_1_sigma = 2,
+           rho_mu = 0.90, rho_sigma = 0.05,
+           cov_s_2_a = 4, cov_s_2_b = 4,
+           tau_exp_lambda = 5,
+           hmc_epsilon = 1, hmc_l = 5,
+           hmc_conc_1 = 0.1, hmc_conc_2 = 0.1,
+           start_init = NULL, sample_rho = T) {
+    
+    
+    ind_case_year_v <- case_year_v - min(case_year_v) + 1
+    years_considered <- sort(unique(ind_case_year_v))
+    total_iter = max((num_iter - start_iter) %/% keep_iter, 1)
+    data_inits <- init_data_rcpp(
+      vote_m, ind_case_year_v, years_considered,
+      circ_ideal_pos_1_m_inits,
+      circ_ideal_pos_2_m_inits,
+      psi_inits, zeta_inits, vote_prob_k_m_inits,
+      mean_1, mean_2, rho, tau, cov_s_init, lambda_kappa_init, 
+      total_iter, pos_ind_list, neg_ind_list,
+      pos_ind_years_list, neg_ind_years_list)
+    
+    circ_ideal_v_1_start_ind = data_inits[[7]]
+    circ_ideal_v_2_start_ind = data_inits[[8]]
+    psi_v_start_ind = data_inits[[9]] 
+    zeta_v_start_ind = data_inits[[10]] 
+    vote_prob_k_start_ind = data_inits[[11]]
+    rho_ind = data_inits[[12]]
+    mean_1_ind = data_inits[[13]]
+    tau_ind = data_inits[[14]] 
+    cov_s_2_ind = data_inits[[15]] 
+    vote_prob_k_lambda_ind = data_inits[[16]]
+    
+    if (!is.null(start_init)) {
+      data_inits[[1]][1,] <- start_init
+    }
+    
+    all_params_draw_info <- sample_judge_ideology_keep_final_draws_cpp_rmhmc(
+      data_inits[[1]], data_inits[[2]]$vote, 
+      data_inits[[2]]$Var1, data_inits[[4]],
+      data_inits[[2]]$Var2, ind_case_year_v, data_inits[[3]]$Var1,
+      circ_ideal_v_1_start_ind, circ_ideal_v_2_start_ind, 
+      data_inits[[5]], data_inits[[6]],
+      psi_v_start_ind, zeta_v_start_ind, 
+      vote_prob_k_start_ind, vote_prob_k_lambda_ind,
+      rho_ind, mean_1_ind, tau_ind, cov_s_2_ind,
+      data_inits[[17]], data_inits[[18]], data_inits[[19]], data_inits[[20]],
+      mean_1_mu, mean_1_sigma, mean_2, rho_mu, rho_sigma,
+      cov_s_2_a, cov_s_2_b, tau_exp_lambda, lambda_kappa_init,
+      sample_sigma, sample_cov,
+      hmc_epsilon, hmc_l, hmc_conc_1, hmc_conc_2,
+      num_iter, start_iter, 
+      keep_iter, sample_rho)
+    
+    all_params_draw <- all_params_draw_info[[1]]
+    
+    pos_names <- data_inits[[3]]
+    judge_names <- 
+      pos_names %>% mutate(judge_name = (rownames(vote_m))[Var2 + 1],
+                           judge_year = years_considered[Var1]) %>%
+      unite("judge_time_info", c("judge_name", "judge_year")) %>%
+      dplyr::select(judge_time_info)
+    if (is.null(colnames(vote_m))) {
+      colnames(vote_m) <- sapply(1:ncol(vote_m), function(i) {
+        paste("vote", i, sep = "_")
+      })
+    }
+    all_param_draws_col_name <- 
+      c(sapply(judge_names, function(name) paste(name, "pos_1", sep = "_")),
+        sapply(judge_names, function(name) paste(name, "pos_2", sep = "_")),
+        sapply(colnames(vote_m), function(name) paste("psi", name, sep = "_")),
+        sapply(colnames(vote_m), function(name) paste("zeta", name, sep = "_")),
+        sapply(colnames(vote_m), function(name) paste("kappa", name, sep = "_")),
+        "rho", "mean_1", "tau", "varsigma", "kappa_lambda")
+    colnames(all_params_draw) <- all_param_draws_col_name
+    return(list(all_params_draw, all_params_draw_info[[2]]))
+  }
 
-# load("result_files/mq_supreme_court_analysis_hmc_0.5_0.5_alt_param_sample_10_continue_2_5_circ_ideal_results_full_parallel_rand_inits_rcpp_1.Rdata")
-# start_val <- chain_run[10000,]
-# rm(chain_run)
-
-sourceCpp("circular_scores_helper_functions.cpp")
-load("../../data_files/mq_supreme_court_vote_info.Rdata")
-load("../../data_files/mq_supreme_court_inits_rcpp.Rdata")
-ptm <- proc.time()
-chain_run <- sample_judge_ideology_keep_final_draws_only_rcpp(
-  mqVotes, mqTime, gradient_inits[[4]], gradient_inits[[5]], 
-  gradient_inits[[1]], gradient_inits[[2]],
-  gradient_inits[[6]], 2.860929, 0, 0.9, 0.6398453, 
-  cov_s_init = 10.13847, lambda_kappa_init = 25, 
-  pos_ind_list = pos_inds, neg_ind_list = neg_inds,
-  neg_ind_years_list = neg_year_inds,
-  num_iter = 510000, start_iter = 10000, keep_iter = 25, 
-  sample_sigma = 10, sample_cov = sigma_cov_prior_6,
-  mean_1_mu = 0, mean_1_sigma = 1.4,
-  rho_mu = 0.9, rho_sigma = 0.04,
-  cov_s_2_a = 2, cov_s_2_b = 2,
-  tau_exp_lambda = 10, 
-  hmc_epsilon = 0.5, hmc_l = 5,
-  hmc_conc_1 = 0.5, hmc_conc_2 = 0.5)
-  #start_init = start_val)
-ptm <- proc.time() - ptm
-save(chain_run, ptm, file = results_save_file)
+#Example use of the code
+#sourceCpp("circular_scores_helper_functions.cpp")
+#load("../../data_files/mq_supreme_court_vote_info.Rdata")
+#load("../../data_files/mq_supreme_court_inits_rcpp.Rdata")
+#ptm <- proc.time()
+#chain_run <- sample_judge_ideology_keep_final_draws_only_rcpp_rmhmc(
+#  mqVotes, mqTime, gradient_inits[[4]], gradient_inits[[5]], 
+#  gradient_inits[[1]], gradient_inits[[2]],
+#  gradient_inits[[6]], 2.860929, 0, 0.9, 0.6398453, 
+#  cov_s_init = 10.13847, lambda_kappa_init = 25, 
+#  pos_ind_list = pos_inds, neg_ind_list = neg_inds,
+#  neg_ind_years_list = neg_year_inds,
+#  num_iter = 510000, start_iter = 10000, keep_iter = 25, 
+#  sample_sigma = 10, sample_cov = sigma_cov_prior_6,
+#  mean_1_mu = 0, mean_1_sigma = 1.4,
+#  rho_mu = 0.9, rho_sigma = 0.04,
+#  cov_s_2_a = 2, cov_s_2_b = 2,
+#  tau_exp_lambda = 10, 
+#  hmc_epsilon = 0.5, hmc_l = 5,
+#  hmc_conc_1 = 0.5, hmc_conc_2 = 0.5)
+#  #start_init = start_val)
+#ptm <- proc.time() - ptm
+#save(chain_run, ptm, file = results_save_file)
