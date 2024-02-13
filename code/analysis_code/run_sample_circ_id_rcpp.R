@@ -358,7 +358,7 @@ sample_judge_ideology_keep_final_draws_only_rcpp_rmhmc <-
 #  pos_ind_list = pos_inds, neg_ind_list = neg_inds,
 #  neg_ind_years_list = neg_year_inds,
 #  num_iter = 510000, start_iter = 10000, keep_iter = 25, 
-#  sample_sigma = 10, sample_cov = sigma_cov_prior_6,
+#  sample_sigma = rep(10, ncol(mqVotes)), sample_cov = sigma_cov_prior_6,
 #  mean_1_mu = 0, mean_1_sigma = 1.4,
 #  rho_mu = 0.9, rho_sigma = 0.04,
 #  cov_s_2_a = 2, cov_s_2_b = 2,
