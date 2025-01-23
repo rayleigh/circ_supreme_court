@@ -361,10 +361,10 @@ vec compute_psi_zeta_gradient(
     double circ_gradient = 
       get_circular_prob_gradient(
         vote_m(i), case_psi_pos, case_zeta_pos, angle_v(i), case_k_m);
-    grad_v(0) += -2 * acos(cos(case_psi_pos - angle_v(i))) *
-      sign(sin(case_psi_pos - angle_v(i))) * circ_gradient;
-    grad_v(1) +=  2 * acos(cos(case_zeta_pos - angle_v(i))) *
-      sign(sin(case_zeta_pos - angle_v(i))) * circ_gradient;
+    grad_v(0) += -acos(cos(case_psi_pos - angle_v(i))) *
+      sign(sin(case_psi_pos - angle_v(i))) * circ_gradient / (pi2);
+    grad_v(1) +=  acos(cos(case_zeta_pos - angle_v(i))) *
+      sign(sin(case_zeta_pos - angle_v(i))) * circ_gradient / (pi2);
   }
   return(grad_v);
 }
@@ -1071,20 +1071,6 @@ vec sample_mean_1_tau_cov_s_2_pos_log(
   double mean_1_mean, double mean_1_sd,
   double cov_s_2_a, double cov_s_2_b,
   double tau_exp_lambda) {
-  
-  Rcout << "input" << endl;
-  Rcout << circ_ideal_pos_1_m << endl;
-  Rcout << circ_ideal_pos_2_m << endl;
-  Rcout << circ_ideal_pos_1_m.n_elem << endl;
-  Rcout << judge_start_ind << endl;
-  Rcout << judge_end_ind << endl;
-  Rcout << mean_2 << endl;
-  Rcout << rho << endl;
-  Rcout << mean_1_mean << endl;
-  Rcout << mean_1_sd << endl;
-  Rcout << cov_s_2_a << endl;
-  Rcout << cov_s_2_b << endl;
-  Rcout << tau_exp_lambda << endl;
   
   mat next_step = rmvnorm(1, zeros(3), sample_cov);
   double next_mean_1 = exp(log(mean_1) + next_step(0));
